@@ -24,3 +24,13 @@
 <p align="center">
 <img src="https://raw.githubusercontent.com/tobozo/Rotatey_Cube/master/rotatey-cube.jpg" />
 </p>
+
+
+<h3 align="center">Front</h3>
+<p align="center">
+<img src="https://raw.githubusercontent.com/tobozo/Rotatey_Cube/master/front.jpg" />
+</p>
+<h3 align="center">Back</h3>
+<p align="center">
+<img src="https://raw.githubusercontent.com/tobozo/Rotatey_Cube/master/back.jpg" />
+</p>
