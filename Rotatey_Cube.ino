@@ -44,21 +44,24 @@
 
  */
 
-
-
 #include "U8glib.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     #include "Wire.h"
 #endif
 
-#define DEBUG true
+#define DEBUG false
 
 // Accel and gyro data
 int16_t  ax, ay, az, gx, gy, gz;
+double MMPI = 1000*M_PI;
 
 long int timeLast = -100, period = 1;
-int scale = 16, sZ = 4; // Overall scale and perspective distance
+// Overall scale and perspective distance
+uint8_t sZ = 4, scale = 16;
+// screen center
+uint8_t centerX = 64;
+uint8_t centerY = 32;
 
 // Initialize cube point arrays
 double C1[] = {  1,  1,  1 };
@@ -69,6 +72,16 @@ double C5[] = { -1,  1,  1 };
 double C6[] = { -1,  1, -1 };
 double C7[] = { -1, -1,  1 };
 double C8[] = { -1, -1, -1 };
+
+// Initialize cube points coords
+uint8_t P1[] = { 0, 0 };
+uint8_t P2[] = { 0, 0 };
+uint8_t P3[] = { 0, 0 };
+uint8_t P4[] = { 0, 0 };
+uint8_t P5[] = { 0, 0 };
+uint8_t P6[] = { 0, 0 };
+uint8_t P7[] = { 0, 0 };
+uint8_t P8[] = { 0, 0 };
 
 U8GLIB_SH1106_128X64 u8g(U8G_I2C_OPT_NO_ACK);	// Display which does not send ACK
 MPU6050 mpu;
@@ -119,7 +132,6 @@ void setup() {
 }
 
 
-
 void loop() {
   u8g.firstPage();  
   do {
@@ -130,190 +142,136 @@ void loop() {
 
 
 
-void cubeloop()
-{
+void cubeloop() {
 
   period = millis()- timeLast;
   timeLast = millis(); 
+  // precalc
+  double MMPI_TIME = MMPI*period;
 
   //Read gyro, apply calibration, ignore small values
   mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
+  // ignore low values (supply uour own values here, based on Serial console output)
+  if(abs(gx)<10){
+    gx = 0;
+  }
+  if(abs(gy)<30){
+    gy = 0;
+  }
+  if(abs(gz)<12){
+    gz = 0;
+  }
+
+  // scale angles down, rotate
+  vectRotXYZ((double)gy/MMPI_TIME, 1); // X
+  vectRotXYZ((double)-gx/MMPI_TIME, 2); // Y
+  vectRotXYZ((double)gz/MMPI_TIME, 3); // Z
+
   #if DEBUG == true
+    Serial.print(scale);
+    Serial.print("\t");  
     Serial.print(ax);
     Serial.print("\t");
     Serial.print(ay);
     Serial.print("\t");
     Serial.print(az);
     Serial.print("\t");
-    Serial.print(gx);
+    Serial.print((uint8_t) gx);
     Serial.print("\t");
-    Serial.print(gy);
+    Serial.print((uint8_t) gy);
     Serial.print("\t");
-    Serial.println(gz);
+    Serial.println((uint8_t) gz);
   #endif
 
-  // ignore low values
-  if(abs(gx)<2){
-    gx = 0;
-  }
-  if(abs(gy)<2){
-    gy = 0;
-  }
-  if(abs(gz)<2){
-    gz = 0;
-  }
-
-  // scale angles down, rotate
-  vectRotX((double)gy/(1000*M_PI)/period);
-  vectRotY((double)-gx/(1000*M_PI)/period);
-  vectRotZ((double)gz/(1000*M_PI)/period);
+  // calculate each point coords
+  P1[0] = centerX + scale/(1+C1[2]/sZ)*C1[0]; P1[1] = centerY + scale/(1+C1[2]/sZ)*C1[1];
+  P2[0] = centerX + scale/(1+C2[2]/sZ)*C2[0]; P2[1] = centerY + scale/(1+C2[2]/sZ)*C2[1];
+  P3[0] = centerX + scale/(1+C3[2]/sZ)*C3[0]; P3[1] = centerY + scale/(1+C3[2]/sZ)*C3[1];
+  P4[0] = centerX + scale/(1+C4[2]/sZ)*C4[0]; P4[1] = centerY + scale/(1+C4[2]/sZ)*C4[1];
+  P5[0] = centerX + scale/(1+C5[2]/sZ)*C5[0]; P5[1] = centerY + scale/(1+C5[2]/sZ)*C5[1];
+  P6[0] = centerX + scale/(1+C6[2]/sZ)*C6[0]; P6[1] = centerY + scale/(1+C6[2]/sZ)*C6[1];
+  P7[0] = centerX + scale/(1+C7[2]/sZ)*C7[0]; P7[1] = centerY + scale/(1+C7[2]/sZ)*C7[1];
+  P8[0] = centerX + scale/(1+C8[2]/sZ)*C8[0]; P8[1] = centerY + scale/(1+C8[2]/sZ)*C8[1];
 
   // draw each cube edge
-  u8g.drawLine(64 + scale/(1+C1[2]/sZ)*C1[0], 32 + scale/(1+C1[2]/sZ)*C1[1], 64 + scale/(1+C2[2]/sZ)*C2[0], 32 + scale/(1+C2[2]/sZ)*C2[1]); //1-2
-  u8g.drawLine(64 + scale/(1+C1[2]/sZ)*C1[0], 32 + scale/(1+C1[2]/sZ)*C1[1], 64 + scale/(1+C3[2]/sZ)*C3[0], 32 + scale/(1+C3[2]/sZ)*C3[1]); //1-3
-  u8g.drawLine(64 + scale/(1+C1[2]/sZ)*C1[0], 32 + scale/(1+C1[2]/sZ)*C1[1], 64 + scale/(1+C5[2]/sZ)*C5[0], 32 + scale/(1+C5[2]/sZ)*C5[1]); //1-5
-  u8g.drawLine(64 + scale/(1+C2[2]/sZ)*C2[0], 32 + scale/(1+C2[2]/sZ)*C2[1], 64 + scale/(1+C4[2]/sZ)*C4[0], 32 + scale/(1+C4[2]/sZ)*C4[1]); //2-4
-  u8g.drawLine(64 + scale/(1+C2[2]/sZ)*C2[0], 32 + scale/(1+C2[2]/sZ)*C2[1], 64 + scale/(1+C6[2]/sZ)*C6[0], 32 + scale/(1+C6[2]/sZ)*C6[1]); //2-6
-  u8g.drawLine(64 + scale/(1+C3[2]/sZ)*C3[0], 32 + scale/(1+C3[2]/sZ)*C3[1], 64 + scale/(1+C4[2]/sZ)*C4[0], 32 + scale/(1+C4[2]/sZ)*C4[1]); //3-4
-  u8g.drawLine(64 + scale/(1+C3[2]/sZ)*C3[0], 32 + scale/(1+C3[2]/sZ)*C3[1], 64 + scale/(1+C7[2]/sZ)*C7[0], 32 + scale/(1+C7[2]/sZ)*C7[1]); //3-7
-  u8g.drawLine(64 + scale/(1+C4[2]/sZ)*C4[0], 32 + scale/(1+C4[2]/sZ)*C4[1], 64 + scale/(1+C8[2]/sZ)*C8[0], 32 + scale/(1+C8[2]/sZ)*C8[1]); //4-8
-  u8g.drawLine(64 + scale/(1+C5[2]/sZ)*C5[0], 32 + scale/(1+C5[2]/sZ)*C5[1], 64 + scale/(1+C6[2]/sZ)*C6[0], 32 + scale/(1+C6[2]/sZ)*C6[1]); //5-6
-  u8g.drawLine(64 + scale/(1+C5[2]/sZ)*C5[0], 32 + scale/(1+C5[2]/sZ)*C5[1], 64 + scale/(1+C7[2]/sZ)*C7[0], 32 + scale/(1+C7[2]/sZ)*C7[1]); //5-7
-  u8g.drawLine(64 + scale/(1+C6[2]/sZ)*C6[0], 32 + scale/(1+C6[2]/sZ)*C6[1], 64 + scale/(1+C8[2]/sZ)*C8[0], 32 + scale/(1+C8[2]/sZ)*C8[1]); //6-8
-  u8g.drawLine(64 + scale/(1+C7[2]/sZ)*C7[0], 32 + scale/(1+C7[2]/sZ)*C7[1], 64 + scale/(1+C8[2]/sZ)*C8[0], 32 + scale/(1+C8[2]/sZ)*C8[1]); //7-8
+  u8g.drawLine(P1[0], P1[1], P2[0], P2[1]); //1-2
+  u8g.drawLine(P1[0], P1[1], P3[0], P3[1]); //1-3
+  u8g.drawLine(P1[0], P1[1], P5[0], P5[1]); //1-5
+  u8g.drawLine(P2[0], P2[1], P4[0], P4[1]); //2-4
+  u8g.drawLine(P2[0], P2[1], P6[0], P6[1]); //2-6
+  u8g.drawLine(P3[0], P3[1], P4[0], P4[1]); //3-4
+  u8g.drawLine(P3[0], P3[1], P7[0], P7[1]); //3-7
+  u8g.drawLine(P4[0], P4[1], P8[0], P8[1]); //4-8
+  u8g.drawLine(P5[0], P5[1], P6[0], P6[1]); //5-6
+  u8g.drawLine(P5[0], P5[1], P7[0], P7[1]); //5-7
+  u8g.drawLine(P6[0], P6[1], P8[0], P8[1]); //6-8
+  u8g.drawLine(P7[0], P7[1], P8[0], P8[1]); //7-8
 
 }
 
 
-void vectRotX(double angle)  //Rotates all the points around the x axis.
-{
-  double yt = C1[1]; 
-  double zt = C1[2];
-  C1[1] = yt*cos(angle)-zt*sin(angle);
-  C1[2] = yt*sin(angle)+zt*cos(angle);
+void vectRotXYZ(double angle, int axe) { 
+  int8_t m1; // coords polarity
+  uint8_t i1, i2; // coords index
+  
+  switch(axe) {
+    case 1: // X
+      i1 = 1; // y
+      i2 = 2; // z
+      m1 = -1;
+    break;
+    case 2: // Y
+      i1 = 0; // x
+      i2 = 2; // z
+      m1 = 1;
+    break;
+    case 3: // Z
+      i1 = 0; // x
+      i2 = 1; // y
+      m1 = 1;
+    break;
+  }
 
-  yt = C2[1]; 
-  zt = C2[2];
-  C2[1] = yt*cos(angle)-zt*sin(angle);
-  C2[2] = yt*sin(angle)+zt*cos(angle);
+  double t1 = C1[i1];
+  double t2 = C1[i2];
+  C1[i1] = t1*cos(angle)+(m1*t2)*sin(angle);
+  C1[i2] = (-m1*t1)*sin(angle)+t2*cos(angle);
+  
+  t1 = C2[i1]; 
+  t2 = C2[i2];
+  C2[i1] = t1*cos(angle)+(m1*t2)*sin(angle);
+  C2[i2] = (-m1*t1)*sin(angle)+t2*cos(angle);
 
-  yt = C3[1]; 
-  zt = C3[2];
-  C3[1] = yt*cos(angle)-zt*sin(angle);
-  C3[2] = yt*sin(angle)+zt*cos(angle);
+  t1 = C3[i1]; 
+  t2 = C3[i2];
+  C3[i1] = t1*cos(angle)+(m1*t2)*sin(angle);
+  C3[i2] = (-m1*t1)*sin(angle)+t2*cos(angle);
 
-  yt = C4[1]; 
-  zt = C4[2];
-  C4[1] = yt*cos(angle)-zt*sin(angle);
-  C4[2] = yt*sin(angle)+zt*cos(angle);
+  t1 = C4[i1]; 
+  t2 = C4[i2];
+  C4[i1] = t1*cos(angle)+(m1*t2)*sin(angle);
+  C4[i2] = (-m1*t1)*sin(angle)+t2*cos(angle);
 
-  yt = C5[1]; 
-  zt = C5[2];
-  C5[1] = yt*cos(angle)-zt*sin(angle);
-  C5[2] = yt*sin(angle)+zt*cos(angle);
+  t1 = C5[i1]; 
+  t2 = C5[i2];
+  C5[i1] = t1*cos(angle)+(m1*t2)*sin(angle);
+  C5[i2] = (-m1*t1)*sin(angle)+t2*cos(angle);
 
-  yt = C6[1]; 
-  zt = C6[2];
-  C6[1] = yt*cos(angle)-zt*sin(angle);
-  C6[2] = yt*sin(angle)+zt*cos(angle);
+  t1 = C6[i1]; 
+  t2 = C6[i2];
+  C6[i1] = t1*cos(angle)+(m1*t2)*sin(angle);
+  C6[i2] = (-m1*t1)*sin(angle)+t2*cos(angle);
 
-  yt = C7[1]; 
-  zt = C7[2];
-  C7[1] = yt*cos(angle)-zt*sin(angle);
-  C7[2] = yt*sin(angle)+zt*cos(angle);
+  t1 = C7[i1]; 
+  t2 = C7[i2];
+  C7[i1] = t1*cos(angle)+(m1*t2)*sin(angle);
+  C7[i2] = (-m1*t1)*sin(angle)+t2*cos(angle);
 
-  yt = C8[1]; 
-  zt = C8[2];
-  C8[1] = yt*cos(angle)-zt*sin(angle);
-  C8[2] = yt*sin(angle)+zt*cos(angle);
-}
-
-void vectRotY(double angle)  //Rotates all the points around the y axis.
-{
-  double xt = C1[0]; 
-  double zt = C1[2];
-  C1[0] = xt*cos(angle)+zt*sin(angle);
-  C1[2] = -xt*sin(angle)+zt*cos(angle);
-
-  xt = C2[0]; 
-  zt = C2[2];
-  C2[0] = xt*cos(angle)+zt*sin(angle);
-  C2[2] = -xt*sin(angle)+zt*cos(angle);
-
-  xt = C3[0]; 
-  zt = C3[2];
-  C3[0] = xt*cos(angle)+zt*sin(angle);
-  C3[2] = -xt*sin(angle)+zt*cos(angle);
-
-  xt = C4[0]; 
-  zt = C4[2];
-  C4[0] = xt*cos(angle)+zt*sin(angle);
-  C4[2] = -xt*sin(angle)+zt*cos(angle);
-
-  xt = C5[0]; 
-  zt = C5[2];
-  C5[0] = xt*cos(angle)+zt*sin(angle);
-  C5[2] = -xt*sin(angle)+zt*cos(angle);
-
-  xt = C6[0]; 
-  zt = C6[2];
-  C6[0] = xt*cos(angle)+zt*sin(angle);
-  C6[2] = -xt*sin(angle)+zt*cos(angle);
-
-  xt = C7[0]; 
-  zt = C7[2];
-  C7[0] = xt*cos(angle)+zt*sin(angle);
-  C7[2] = -xt*sin(angle)+zt*cos(angle);
-
-  xt = C8[0]; 
-  zt = C8[2];
-  C8[0] = xt*cos(angle)+zt*sin(angle);
-  C8[2] = -xt*sin(angle)+zt*cos(angle);
-
-}
-
-void vectRotZ(double angle)  //Rotates all the points around the z axis.
-{
-  double xt = C1[0]; 
-  double yt = C1[1];
-  C1[0] = xt*cos(angle)+yt*sin(angle);
-  C1[1] = -xt*sin(angle)+yt*cos(angle);
-
-  xt = C2[0]; 
-  yt = C2[1];
-  C2[0] = xt*cos(angle)+yt*sin(angle);
-  C2[1] = -xt*sin(angle)+yt*cos(angle);
-
-  xt = C3[0]; 
-  yt = C3[1];
-  C3[0] = xt*cos(angle)+yt*sin(angle);
-  C3[1] = -xt*sin(angle)+yt*cos(angle);
-
-  xt = C4[0]; 
-  yt = C4[1];
-  C4[0] = xt*cos(angle)+yt*sin(angle);
-  C4[1] = -xt*sin(angle)+yt*cos(angle);
-
-  xt = C5[0]; 
-  yt = C5[1];
-  C5[0] = xt*cos(angle)+yt*sin(angle);
-  C5[1] = -xt*sin(angle)+yt*cos(angle);
-
-  xt = C6[0]; 
-  yt = C6[1];
-  C6[0] = xt*cos(angle)+yt*sin(angle);
-  C6[1] = -xt*sin(angle)+yt*cos(angle);
-
-  xt = C7[0]; 
-  yt = C7[1];
-  C7[0] = xt*cos(angle)+yt*sin(angle);
-  C7[1] = -xt*sin(angle)+yt*cos(angle);
-
-  xt = C8[0]; 
-  yt = C8[1];
-  C8[0] = xt*cos(angle)+yt*sin(angle);
-  C8[1] = -xt*sin(angle)+yt*cos(angle);
+  t1 = C8[i1]; 
+  t2 = C8[i2];
+  C8[i1] = t1*cos(angle)+(m1*t2)*sin(angle);
+  C8[i2] = (-m1*t1)*sin(angle)+t2*cos(angle);
 
 }
 
