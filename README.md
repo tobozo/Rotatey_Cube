@@ -8,6 +8,7 @@
 
   This project is heavily inspired from the work of [GoblinJuicer](https://www.reddit.com/user/GoblinJuicer)
   who developed and implemented [the idea](http://imgur.com/gallery/fQUAx/new) and posted on [this subreddit](https://www.reddit.com/r/arduino/comments/3vmw1k/ive_been_playing_with_a_gyroscope_and_an_lcd/).
+  It has since been [remastered in LUA for the CactusCon6](https://github.com/erikwilson/CactusCon6/blob/master/src/cube.lua)
   
   The code is a remix of the original, it's using u8glib and mpu6050 libraries instead of Adafruit and ITG-3200.
 ```
